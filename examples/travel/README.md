@@ -33,6 +33,12 @@ Storefront (`scripts/smoke_chat.py --vertical travel` runs the same three turns)
 2. Compare the stay you picked against a refundable alternative — what's the price difference for flexibility?
 3. Add the refundable stay to my trip, and what does ACME Travel's cancellation window look like for it?
 
+Ticket search (structured UI on the Search tab, or in chat):
+
+1. Search tickets from New York to Lisbon for two adults in mid-October under $2500 — compare Expedia, Google Flights, and Travelocity.
+2. On Search: fill origin/destination/dates/travelers/budget, leave all three sites enabled, then Save results or Create price watch.
+3. On Watches: Check prices until an under-budget in-app alert appears.
+
 Portal (`scripts/smoke_chat.py --vertical travel --merchant`; the third turn is refused
 until the change is approved on its card, and the last two follow the approval):
 
@@ -56,7 +62,14 @@ Single prompts, each in a fresh session:
   `travel_date` filter is enforced as availability; a dated result is a quote:
   `free_cancellation_until` if refundable, a `date_flex` rate strip, and
   `units_left_for_dates` when three or fewer rooms remain. A stay's first `add_to_cart`
-  books the itinerary's planned nights (`TripPlan`).
+  books the itinerary's planned nights (`TripPlan`). Ticket searches fan out across
+  simulated shopping sites (Expedia, Google Flights, Travelocity) via
+  `api/providers/`.
+- `api/providers/`: site registry, adapters, fan-out merge, and in-memory saved
+  searches / price watches.
+- `api/flights_api.py`: `/api/sites`, `/api/flight-search`, `/api/saved-searches`,
+  `/api/watches` for the structured Search and Watches storefront views.
+- `api/flight_results.py`: registers `present_flight_results` for cross-site chat cards.
 - `api/mock_merchant.py`: `MockTravelMerchant`, the `MerchantBackend` for the occupancy
   fixture's stays, over the same `MockTravel`. `stage_promotion` is a nightly-rate move
   for a date window, applied as a rate override; `stage_price_update` moves the base rate,
@@ -66,12 +79,15 @@ Single prompts, each in a fresh session:
 - `api/occupancy.py`: registers `present_occupancy_calendar`; the agent names stays and a
   window; every figure comes from `get_occupancy_calendar`.
 - `api/agent_config.py`: the two configs. The shopping one asks for `travel_date` on dated
-  searches; the merchant one adds occupancy terms to `metrics_intent_terms` and
-  `nightly_rate` to `price_bearing_fields` and `listing_update_blocked_fields`.
-- `api/main.py`: the storefront host with the itinerary extension and an
+  searches and multi-site ticket attributes; the merchant one adds occupancy terms to
+  `metrics_intent_terms` and `nightly_rate` to `price_bearing_fields` and
+  `listing_update_blocked_fields`.
+- `api/main.py`: the storefront host with the itinerary and flight-results extensions and an
   `InMemoryMemoryStore` that `MemorySeeder` refills from `data/memory-seed.json` on boot.
 - `api/merchant.py`: the `today` block on `/overview` and the `/occupancy` read.
 - `storefront-web/`, `merchant-web/`: this example's cards, views, and tokens, over `../web-shared/`.
+  The storefront adds Search (structured form + site picker) and Watches (saved results and
+  in-app price alerts) beside the conversational Assistant.
 
 ## Data
 

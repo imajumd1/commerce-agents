@@ -9,8 +9,8 @@ import { NOUNS, TripThumb } from "@/lib/orders";
 import { PostcardWindow } from "../PostcardWindow";
 
 const STARTERS: Starter[] = [
+  { icon: "plane", prompt: "Search tickets from New York to Lisbon in mid-October for two adults under $2500 — compare Expedia, Google Flights, and Travelocity" },
   { icon: "calendar", prompt: "Plan a long weekend in Lisbon" },
-  { icon: "plane", prompt: "Compare flights to Kyoto" },
   { icon: "return", prompt: "Something refundable in Reykjavik" },
   { icon: "pin", prompt: "What's my Marrakesh booking status?" },
 ];
@@ -21,7 +21,7 @@ const POSTCARD_CITIES = ["Lisbon", "Kyoto", "Mexico City", "Reykjavik", "Marrake
 /** Sends just before the 300ms mail animation ends. */
 const MAILING_MS = 260;
 
-const OPENER = "Say where you're headed and ACME Assistant finds the stays, flights, and days worth keeping.";
+const OPENER = "Say where you're headed — or open Search to compare tickets across Expedia, Google Flights, and Travelocity.";
 
 function Brief({ trips }: { trips: Order[] | null }) {
   const open = trips ? upcoming(trips) : [];
@@ -77,7 +77,19 @@ function Postcards() {
   );
 }
 
-export default function HomeView({ travelerName, trips, tripsFailed, onSeeTrips }: { travelerName: string; trips: Order[] | null; tripsFailed: boolean; onSeeTrips: () => void }) {
+export default function HomeView({
+  travelerName,
+  trips,
+  tripsFailed,
+  onSeeTrips,
+  onOpenSearch,
+}: {
+  travelerName: string;
+  trips: Order[] | null;
+  tripsFailed: boolean;
+  onSeeTrips: () => void;
+  onOpenSearch: () => void;
+}) {
   return (
     <div className="flex flex-col gap-4">
       <Greeting
@@ -89,6 +101,15 @@ export default function HomeView({ travelerName, trips, tripsFailed, onSeeTrips 
       >
         <Brief trips={trips} />
       </Greeting>
+      <button
+        type="button"
+        onClick={onOpenSearch}
+        className="rounded-(--radius-lg) border border-(--line) bg-(--card) px-4 py-3 text-left shadow-(--shadow-sm) transition hover:border-(--accent)"
+      >
+        <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-(--accent-ink)">Structured search</div>
+        <div className="al-display mt-1 text-[20px] font-semibold text-(--ink)">Compare tickets across three sites</div>
+        <p className="mt-1 text-[13px] text-(--ink-2)">Dates, travelers, destinations, and budget — results from Expedia, Google Flights, and Travelocity.</p>
+      </button>
       <Starters items={STARTERS} />
       <ArrivingPanel orders={trips} failed={tripsFailed} nouns={NOUNS} thumb={(order) => <TripThumb order={order} />} onSeeAll={onSeeTrips} />
       <HomeSection title="Start from a postcard" subtitle="Pick one and ACME Assistant starts planning">

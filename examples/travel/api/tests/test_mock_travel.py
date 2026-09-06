@@ -23,7 +23,10 @@ async def test_search_matches_cities_and_titles(backend, session):
     assert stays and stays[0].product_id == "AL-STAY-101"
 
     flights = await backend.search_products(session, "flight from New York to Lisbon")
-    assert flights and flights[0].product_id in {"AL-FLT-201", "AL-FLT-202"}
+    assert flights
+    assert all(p.attributes.get("source_site") in {"expedia", "google_flights", "travelocity"} for p in flights)
+    assert any("Lisbon" in (p.attributes.get("destination_city") or "") for p in flights)
+    assert any(p.product_id.endswith("AL-FLT-201") or p.product_id.endswith("AL-FLT-202") for p in flights)
 
     kyoto = await backend.search_products(session, "Kyoto")
     assert kyoto

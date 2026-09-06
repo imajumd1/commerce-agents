@@ -50,9 +50,15 @@ from shopping_agent import (
     UserPreferences,
 )
 
+from .providers import FlightSearchRequest, SiteRegistry, fanout_search
+
 DATA_DIR = example_data_dir(__file__)
 
 _TRAVEL_DATE = "travel_date"
+_FLIGHT_QUERY_HINTS = frozenset(
+    {"flight", "flights", "ticket", "tickets", "airfare", "fare", "fly", "plane"}
+)
+_ROUTE_ATTRS = ("origin_city", "destination_city", "origin", "destination")
 _SEARCH_WEIGHTS = {
     "title": 3.0,
     "cities": 2.5,
@@ -176,10 +182,93 @@ class MockTravel(StorefrontBackend):
         }
         self._carts = SessionCarts()
         self._trip_plans: dict[str, TripPlan] = {}
+        self.sites = SiteRegistry()
+        # Offers minted by shopping-site providers; merged into product lookups.
+        self._provider_offers: dict[str, ProductDetails] = {}
 
     # ------------------------------------------------------------------
     # Catalog
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_ticket_search(query: str, filters: SearchFilters | None) -> bool:
+        if filters is not None:
+            if filters.category == "flights":
+                return True
+            attrs = filters.attributes
+            if any(attrs.get(key) for key in _ROUTE_ATTRS):
+                return True
+        tokens = {t.lower() for t in query.split()}
+        return bool(tokens & _FLIGHT_QUERY_HINTS)
+
+    def _flight_request_from_search(
+        self, query: str, filters: SearchFilters | None, limit: int
+    ) -> FlightSearchRequest:
+        attrs = filters.attributes if filters else {}
+        budget = None
+        if filters and filters.max_price is not None:
+            budget = filters.max_price
+        elif attrs.get("budget"):
+            try:
+                budget = float(attrs["budget"])
+            except ValueError:
+                budget = None
+        adults = 1
+        children = 0
+        try:
+            adults = max(1, int(attrs.get("adults", "1")))
+        except ValueError:
+            adults = 1
+        try:
+            children = max(0, int(attrs.get("children", "0")))
+        except ValueError:
+            children = 0
+        return FlightSearchRequest(
+            origin=attrs.get("origin_city") or attrs.get("origin") or "",
+            destination=attrs.get("destination_city") or attrs.get("destination") or "",
+            depart_date=attrs.get("travel_date") or attrs.get("depart_date") or "",
+            return_date=attrs.get("return_date") or "",
+            adults=adults,
+            children=children,
+            budget=budget,
+            query=query,
+            limit=limit,
+        )
+
+    def remember_provider_offers(self, offers: list[ProductDetails]) -> None:
+        for offer in offers:
+            self._provider_offers[offer.product_id] = offer
+            self.products[offer.product_id] = offer
+
+    async def search_flights(self, request: FlightSearchRequest) -> list[ProductDetails]:
+        offers = fanout_search(self.sites, self.products, request)
+        self.remember_provider_offers(offers)
+        travel_date = None
+        if request.depart_date:
+            try:
+                travel_date = date.fromisoformat(request.depart_date)
+            except ValueError:
+                travel_date = None
+        if travel_date is not None:
+            for offer in offers:
+                # Quotes reuse the dated-cancellation stamp when refundable.
+                summary = Product(
+                    product_id=offer.product_id,
+                    title=offer.title,
+                    brand=offer.brand,
+                    price=offer.price,
+                    currency=offer.currency,
+                    rating=offer.rating,
+                    review_count=offer.review_count,
+                    category=offer.category,
+                    labels=list(offer.labels),
+                    attributes=dict(offer.attributes),
+                    in_stock=offer.in_stock,
+                    short_description=offer.short_description,
+                )
+                self._quote_for_date(summary, travel_date)
+                offer.attributes = dict(summary.attributes)
+        return offers
 
     def _searchable_text(self, product: ProductDetails) -> dict[str, str]:
         return {
@@ -218,8 +307,18 @@ class MockTravel(StorefrontBackend):
         limit: int = 8,
     ) -> list[Product]:
         del session
+        if self._is_ticket_search(query, filters):
+            request = self._flight_request_from_search(query, filters, limit)
+            offers = await self.search_flights(request)
+            return [summary_of(offer) for offer in offers]
+        # Exclude provider-minted ids from ordinary catalog search.
+        catalog = [
+            product
+            for product in self.products.values()
+            if product.product_id not in self._provider_offers
+        ]
         ranked = rank_products(
-            self.products.values(),
+            catalog,
             query,
             filters,
             limit,

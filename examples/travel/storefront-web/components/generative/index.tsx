@@ -7,6 +7,7 @@ import { type GenerativeBlockProps, UnknownBlock } from "web-shared";
 import type {
   CheckoutPayload,
   ComparisonPayload,
+  FlightResultsPayload,
   GuidePayload,
   ItineraryPayload,
   OrderStatusPayload,
@@ -16,6 +17,7 @@ import type {
 import BoardingPass from "./BoardingPass";
 import BookingStatusCard from "./BookingStatusCard";
 import ComparisonSpread from "./ComparisonSpread";
+import FlightResultsCard from "./FlightResultsCard";
 import GuideCard from "./GuideCard";
 import ItineraryTimeline from "./ItineraryTimeline";
 import PlanChecklist from "./PlanChecklist";
@@ -59,6 +61,13 @@ export default function GenerativeBlock({ block, status }: GenerativeBlockProps)
       return (
         <ItineraryTimeline
           payload={payload as ItineraryPayload}
+          partial={partial}
+        />
+      );
+    case "flight_results":
+      return (
+        <FlightResultsCard
+          payload={payload as FlightResultsPayload}
           partial={partial}
         />
       );
