@@ -8,12 +8,13 @@ import { type AgentEvent, OrdersView, plural, StoreShell, type StoreView, upcomi
 import Chat from "@/components/Chat";
 import TripPanel from "@/components/TripPanel";
 import HomeView from "@/components/views/HomeView";
+import { SearchView, WatchesView } from "@/components/views/SearchViews";
 import { api, UNREACHABLE } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { NOUNS, TripThumb } from "@/lib/orders";
 import type { CartPayload } from "@/lib/types";
 
-type View = "assistant" | "trips";
+type View = "assistant" | "search" | "watches" | "trips";
 
 const ASSISTANT = "ACME Assistant";
 
@@ -55,10 +56,19 @@ export default function StorefrontPage() {
 
   const views: StoreView<View>[] = [
     { id: "assistant", label: "Assistant", icon: "spark" },
+    { id: "search", label: "Search", icon: "search" },
+    { id: "watches", label: "Watches", icon: "alert" },
     { id: "trips", label: "Trips", icon: "plane" },
   ];
   const shopper = session.shopper ?? { name: "Guest" };
   const count = cart?.items.length ?? 0;
+
+  const placeholder =
+    view === "trips"
+      ? "Ask about a trip, a change, a refund…"
+      : view === "search"
+        ? "Or ask the assistant to search tickets…"
+        : "Ask about a trip, a flight, a booking…";
 
   return (
     <StoreShell
@@ -74,12 +84,25 @@ export default function StorefrontPage() {
       panel={<TripPanel cart={cart} checkoutStaged={checkoutStaged} />}
       panelOpen={panelOpen}
       onPanelOpenChange={setPanelOpen}
-      placeholder={view === "trips" ? "Ask about a trip, a change, a refund…" : "Ask about a trip, a flight, a booking…"}
+      placeholder={placeholder}
     >
       {/* The conversation stays mounted under the other view so its cards keep their state. */}
       <div className={view === "assistant" ? "h-full" : "hidden"}>
-        <Chat chat={chat} home={<HomeView travelerName={shopper.name} trips={trips} tripsFailed={tripsFailed} onSeeTrips={() => setView("trips")} />} />
+        <Chat
+          chat={chat}
+          home={
+            <HomeView
+              travelerName={shopper.name}
+              trips={trips}
+              tripsFailed={tripsFailed}
+              onSeeTrips={() => setView("trips")}
+              onOpenSearch={() => setView("search")}
+            />
+          }
+        />
       </div>
+      {view === "search" ? <SearchView ready={Boolean(session.sessionId)} /> : null}
+      {view === "watches" ? <WatchesView ready={Boolean(session.sessionId)} /> : null}
       {view === "trips" ? (
         <OrdersView
           orders={trips}

@@ -121,3 +121,74 @@ export interface ItineraryPayload {
   travel_dates?: string;
   days: { label: string; note?: string; products: Product[] }[];
 }
+
+/** `present_flight_results`; cross-site ticket shortlist. */
+export interface FlightResultsPayload {
+  title: string;
+  note?: string;
+  items: {
+    product: Product;
+    source_site?: string;
+    source_site_name?: string;
+  }[];
+  best_product_id?: string;
+  sites?: string[];
+}
+
+export interface ShoppingSite {
+  site_id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface FlightSearchRequest {
+  origin: string;
+  destination: string;
+  depart_date: string;
+  return_date: string;
+  adults: number;
+  children: number;
+  budget?: number | null;
+  query?: string;
+  limit?: number;
+}
+
+export interface FlightSearchResponse {
+  request: FlightSearchRequest;
+  sites: ShoppingSite[];
+  results: Product[];
+  count: number;
+}
+
+export interface SavedSearch {
+  id: string;
+  session_id: string;
+  title: string;
+  request: FlightSearchRequest;
+  results: Product[];
+  created_at: string;
+}
+
+export interface PriceWatchAlert {
+  id: string;
+  created_at: string;
+  message: string;
+  best_price: number;
+  product_id: string;
+  source_site?: string;
+}
+
+export interface PriceWatch {
+  id: string;
+  session_id: string;
+  title: string;
+  request: FlightSearchRequest;
+  budget: number;
+  baseline_price: number | null;
+  active: boolean;
+  created_at: string;
+  last_checked_at: string | null;
+  check_count: number;
+  alerts: PriceWatchAlert[];
+}

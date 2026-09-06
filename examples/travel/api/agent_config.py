@@ -33,7 +33,14 @@ def build_shopping_config() -> ShoppingAgentConfig:
             "Stays and experiences are date-bound: when the traveler has named dates, "
             "pass the check-in date as an ISO filters.attributes['travel_date'] on "
             "every search — results and prices are quotes for those dates, not "
-            "catalog constants."
+            "catalog constants. "
+            "Ticket and flight searches fan out across the shopper's enabled shopping "
+            "sites (Expedia, Google Flights, Travelocity by default). For tickets, set "
+            "filters.category to 'flights' and pass origin_city, destination_city, "
+            "travel_date (depart), return_date when known, adults, children, and budget "
+            "in filters.attributes. Each result's attributes.source_site names the site; "
+            "compare fares across sites and call present_flight_results when showing a "
+            "cross-site ticket shortlist."
         ),
     )
 
