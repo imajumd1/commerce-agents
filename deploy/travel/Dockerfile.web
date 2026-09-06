@@ -1,0 +1,24 @@
+# Travel storefront for Railway / container hosts.
+# Build context: repository root.
+FROM node:22-bookworm-slim AS build
+
+WORKDIR /app/examples
+COPY examples/ ./
+RUN npm ci --no-audit --no-fund
+
+WORKDIR /app/examples/travel/storefront-web
+
+# Browser calls this public API URL — set as a Railway variable before building.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8001
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN npm run build
+
+FROM node:22-bookworm-slim AS run
+WORKDIR /app/examples/travel/storefront-web
+ENV NODE_ENV=production
+COPY --from=build /app/examples/web-shared /app/examples/web-shared
+COPY --from=build /app/examples/node_modules /app/examples/node_modules
+COPY --from=build /app/examples/travel/storefront-web ./
+EXPOSE 3000
+CMD ["sh", "-c", "npx next start -H 0.0.0.0 -p ${PORT:-3000}"]

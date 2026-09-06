@@ -1,0 +1,14 @@
+.git
+.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+.env
+**/.env
+plugins
+tests
+.github
+docs
+*.md
+!deploy/travel/README.md
